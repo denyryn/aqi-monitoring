@@ -1,0 +1,66 @@
+{% extends "dashboard/base.html" %}
+{% block title %} — History{% endblock %}
+
+{% block content %}
+<div class="section">
+  <div class="section-header">
+    <h1 class="page-title">Prediction History</h1>
+  </div>
+
+  <table class="list-table">
+    <thead>
+      <tr>
+        <th>Time</th>
+        <th>Class</th>
+        <th>Confidence</th>
+        <th>NO₂</th>
+        <th>CO</th>
+        <th>PM₁₀</th>
+        <th>PM₂.₅</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in page %}
+      <tr>
+        <td class="metadata">{{ r.created_at|date:"M d, H:i" }}</td>
+        <td><span class="aqi-tag {{ r.predicted_class|slugify }}">{{ r.predicted_class }}</span></td>
+        <td>
+          <span style="font-weight:500;">{{ r.confidence|floatformat:3 }}</span>
+          <div class="conf-bar" style="width:80px;display:inline-block;vertical-align:middle;margin-left:8px;">
+            <div class="conf-bar-fill" style="width:{% widthratio r.confidence 1 100 %}%"></div>
+          </div>
+        </td>
+        <td>{{ r.no2 }}</td>
+        <td>{{ r.co }}</td>
+        <td>{{ r.pm10 }}</td>
+        <td>{{ r.pm25 }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" style="text-align:center;padding:48px;color:#606060;">No predictions yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if page.has_other_pages %}
+  <div class="pagination">
+    {% if page.has_previous %}
+    <a href="?page={{ page.previous_page_number }}" class="page-btn">←</a>
+    {% else %}
+    <span class="page-btn disabled">←</span>
+    {% endif %}
+    {% for n in page.paginator.page_range %}
+      {% if n == page.number %}
+      <span class="page-btn active">{{ n }}</span>
+      {% elif n >= page.number|add:"-2" and n <= page.number|add:"2" %}
+      <a href="?page={{ n }}" class="page-btn">{{ n }}</a>
+      {% endif %}
+    {% endfor %}
+    {% if page.has_next %}
+    <a href="?page={{ page.next_page_number }}" class="page-btn">→</a>
+    {% else %}
+    <span class="page-btn disabled">→</span>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

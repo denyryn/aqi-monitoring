@@ -1,0 +1,85 @@
+{% extends "dashboard/base.html" %}
+{% block title %} — Predict{% endblock %}
+
+{% block content %}
+<div class="section">
+  <div class="section-header">
+    <h1 class="page-title">AQI Prediction</h1>
+  </div>
+
+  <div class="flex gap-16" style="align-items: flex-start;">
+    <div class="input-form">
+      <form method="post">
+        {% csrf_token %}
+        <div class="form-group">
+          <label class="form-label">NO₂ (ppm)</label>
+          <input class="form-input" type="number" step="any" name="no2" value="{{ input.no2 }}" placeholder="0.00 – 50.00+" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">CO (ppm)</label>
+          <input class="form-input" type="number" step="any" name="co" value="{{ input.co }}" placeholder="0.00 – 100.00+" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">PM₁₀ (µg/m³)</label>
+          <input class="form-input" type="number" step="any" name="pm10" value="{{ input.pm10 }}" placeholder="0.0 – 400.0+" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">PM₂.₅ (µg/m³)</label>
+          <input class="form-input" type="number" step="any" name="pm25" value="{{ input.pm25 }}" placeholder="0.0 – 400.0+" required>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Predict</button>
+          <button type="reset" class="btn btn-outline">Clear</button>
+        </div>
+      </form>
+    </div>
+
+    <div style="flex:1; min-width:0;">
+      {% if error %}
+      <div class="alert alert-error">{{ error }}</div>
+      {% endif %}
+
+      {% if result %}
+      <div class="result-card">
+        <div class="result-header">
+          <div>
+            <div class="metadata mb-8">Prediction Result</div>
+            <span class="result-badge aqi-tag {{ result.class_name|slugify }}">{{ result.class_name }}</span>
+          </div>
+          <div style="text-align:right;">
+            <div class="metadata mb-8">Confidence</div>
+            <div style="font-size:32px;font-weight:700;">{{ result.confidence_pct }}%</div>
+          </div>
+        </div>
+
+        <div class="confidence-meter">
+          <div class="meter-label">
+            <span>0%</span>
+            <span>50%</span>
+            <span>100%</span>
+          </div>
+          <div class="conf-bar">
+            <div class="conf-bar-fill" style="width:{{ result.confidence_pct }}%"></div>
+          </div>
+        </div>
+
+        <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:16px;">
+          <div class="metadata mb-8">Per-Class Probabilities</div>
+          <div class="prob-list">
+            {% for cls, prob in result.probabilities_pct.items %}
+            <div class="prob-item">
+              <span class="prob-name {% if cls == result.class_name %}" style="font-weight:500{% endif %}">{{ cls }}</span>
+              <div class="prob-bar">
+                <div class="prob-bar-fill {% if prob > 50 %}high{% elif prob > 10 %}mid{% endif %}" style="width:{{ prob }}%"></div>
+              </div>
+              <span class="prob-val">{{ prob }}%</span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

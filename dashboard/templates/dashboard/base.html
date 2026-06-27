@@ -1,0 +1,55 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}AQI Monitor{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'dashboard/style.css' %}">
+</head>
+<body>
+
+<!-- Top Bar -->
+<header class="topbar" id="topbar">
+  <a href="{% url 'index' %}" class="topbar-logo">
+    <span class="logo-mark">AQ</span>
+    <span>AQI Monitor</span>
+  </a>
+</header>
+
+<div class="app-layout">
+  <!-- Sidebar -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-section">
+      <a href="{% url 'index' %}" class="nav-item {% if active_tab == 'dashboard' %}active{% endif %}">
+        <span class="nav-icon nav-icon-dashboard"></span>
+        <span class="nav-label">Dashboard</span>
+      </a>
+      <a href="{% url 'predict' %}" class="nav-item {% if active_tab == 'predict' %}active{% endif %}">
+        <span class="nav-icon nav-icon-predict"></span>
+        <span class="nav-label">Predict</span>
+      </a>
+      <a href="{% url 'history' %}" class="nav-item {% if active_tab == 'history' %}active{% endif %}">
+        <span class="nav-icon nav-icon-history"></span>
+        <span class="nav-label">History</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <main class="main-content">
+    {% block content %}{% endblock %}
+  </main>
+</div>
+
+<script>
+const topbar = document.getElementById('topbar');
+window.addEventListener('scroll', () => {
+  topbar.classList.toggle('scrolled', window.scrollY > 0);
+});
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

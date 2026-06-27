@@ -1,0 +1,25 @@
+services:
+  app:
+    build: .
+    expose:
+      - "8000"
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings
+      - MQTT_BROKER=${MQTT_BROKER:-mosquitto}
+      - MQTT_PORT=${MQTT_PORT:-1883}
+      - MQTT_TOPIC=${MQTT_TOPIC:-aqi/sensor}
+    depends_on:
+      mosquitto:
+        condition: service_started
+    volumes:
+      - ./db.sqlite3:/app/db.sqlite3
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    ports:
+      - "1883:1883"
+    volumes:
+      - mosquitto_data:/mosquitto/data
+
+volumes:
+  mosquitto_data:

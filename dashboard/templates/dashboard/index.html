@@ -1,0 +1,167 @@
+{% extends "dashboard/base.html" %}
+{% block title %} — Dashboard{% endblock %}
+{% load static %}
+
+{% block content %}
+<!-- Stat Cards -->
+<div class="stat-row">
+  <div class="stat-card">
+    <div class="stat-card-label">Total Predictions</div>
+    <div class="stat-card-value">{{ total }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Most Common</div>
+    <div class="stat-card-value" style="font-size:20px;">{{ top_class }}</div>
+    {% if dist_counts.0 %}
+    <div class="trend-indicator" style="color:#606060;">{{ dist_counts.0 }} records</div>
+    {% endif %}
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Last Prediction</div>
+    <div class="stat-card-value" style="font-size:20px;">{{ last.predicted_class|default:"-" }}</div>
+    {% if last %}
+    <div class="trend-indicator" style="color:#606060;">{{ last.created_at|date:"M d, H:i" }}</div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Charts -->
+<div class="chart-grid">
+  <div class="chart-card">
+    <div class="section-title">Class Distribution</div>
+    <div class="chart-container chart-container-sm">
+      <canvas id="waffleChart"></canvas>
+      <div id="waffleLegend" class="waffle-legend"></div>
+    </div>
+  </div>
+  <div class="chart-card">
+    <div class="section-title">Confidence Trend</div>
+    <div class="chart-container">
+      <canvas id="trendChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Predictions -->
+<div class="section">
+  <div class="section-header">
+    <h2 class="section-title">Recent Predictions</h2>
+    <a href="{% url 'history' %}" class="btn btn-outline btn-text">View all</a>
+  </div>
+  <table class="list-table">
+    <thead>
+      <tr>
+        <th>Time</th>
+        <th>Class</th>
+        <th>Confidence</th>
+        <th>NO₂</th>
+        <th>CO</th>
+        <th>PM₁₀</th>
+        <th>PM₂.₅</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in recent_records %}
+      <tr>
+        <td class="metadata">{{ r.created_at|date:"M d, H:i" }}</td>
+        <td><span class="aqi-tag {{ r.predicted_class|slugify }}">{{ r.predicted_class }}</span></td>
+        <td>
+          <span style="font-weight:500;">{{ r.confidence|floatformat:3 }}</span>
+          <div class="conf-bar" style="width:80px;display:inline-block;vertical-align:middle;margin-left:8px;">
+            <div class="conf-bar-fill" style="width:{% widthratio r.confidence 1 100 %}%"></div>
+          </div>
+        </td>
+        <td>{{ r.no2 }}</td>
+        <td>{{ r.co }}</td>
+        <td>{{ r.pm10 }}</td>
+        <td>{{ r.pm25 }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" style="text-align:center;padding:48px;color:#606060;">No predictions yet. <a href="{% url 'predict' %}">Run your first prediction</a></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script>
+// Waffle chart - fills card width
+(function() {
+  const labels = {{ dist_labels|safe }};
+  const counts = {{ dist_counts|safe }};
+  const total = counts.reduce((a,b) => a+b, 0);
+  if (total === 0) return;
+  const colorMap = {
+    'Good': '#2BA640',
+    'Moderate': '#E89C00',
+    'Unhealthy for Sensitive Groups': '#E06800',
+    'Unhealthy': '#D63000',
+    'Very Unhealthy': '#A02040',
+    'Hazardous': '#4A0A1A'
+  };
+  const colors = labels.map(l => colorMap[l] || '#999');
+  const totalCells = 100;
+  const ratios = counts.map(c => c / total);
+  const filled = ratios.map(r => Math.round(r * totalCells));
+  let sum = filled.reduce((a,b) => a+b, 0);
+  let diff = totalCells - sum;
+  if (diff !== 0) { filled[filled.length-1] += diff; }
+  const canvas = document.getElementById('waffleChart');
+  const parent = canvas.parentElement;
+  const availW = parent.clientWidth - 4;
+  const cols = 20, rows = 5;
+  const gap = 2;
+  const cellSize = Math.floor((availW - (cols-1)*gap) / cols);
+  canvas.style.width = (cols * (cellSize + gap) - gap) + 'px';
+  canvas.style.height = (rows * (cellSize + gap) - gap) + 'px';
+  canvas.width = cols * (cellSize + gap) - gap;
+  canvas.height = rows * (cellSize + gap) - gap;
+  const ctx = canvas.getContext('2d');
+  let idx = 0;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      while (idx < filled.length && filled[idx] === 0) idx++;
+      const color = idx < filled.length ? colors[idx % colors.length] : '#EEE';
+      ctx.fillStyle = color;
+      if (filled[idx] !== undefined) filled[idx]--;
+      ctx.fillRect(c * (cellSize + gap), r * (cellSize + gap), cellSize, cellSize);
+    }
+  }
+  const legend = document.getElementById('waffleLegend');
+  legend.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:3px 8px;margin-top:6px;font-size:11px;color:#606060;">' +
+    labels.map(l =>
+      '<span style="white-space:nowrap;">' +
+      '<span style="width:8px;height:8px;background:'+(colorMap[l]||'#999')+';display:inline-block;border-radius:1px;margin-right:3px;vertical-align:middle;"></span>' +
+      '<span style="vertical-align:middle;">' + l + '</span></span>'
+    ).join('') + '</div>';
+})();
+new Chart(document.getElementById('trendChart'), {
+  type: 'line',
+  data: {
+    labels: {{ trend_labels|safe }},
+    datasets: [{
+      label: 'Confidence',
+      data: {{ trend_conf|safe }},
+      borderColor: '#FF0000',
+      backgroundColor: 'rgba(255,0,0,0.05)',
+      fill: true,
+      tension: 0.3,
+      pointRadius: 2,
+      pointHoverRadius: 4,
+      borderWidth: 2
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      y: { min: 0, max: 1, grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { font: { family: 'Roboto', size: 11 } } },
+      x: { grid: { display: false }, ticks: { font: { family: 'Roboto', size: 11 } } }
+    },
+    plugins: { legend: { display: false } }
+  }
+});
+</script>
+{% endblock %}
