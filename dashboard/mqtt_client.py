@@ -11,18 +11,35 @@ from .ml import predict
 from .models import PredictionRecord
 
 
+def _parse(payload: str):
+    """Return (no2, co, pm10, pm25) from CSV or JSON payload."""
+    payload = payload.strip()
+    # strip optional "TELEMETRY:" prefix (legacy CSV)
+    if ":" in payload:
+        payload = payload.split(":", 1)[1].strip()
+
+    if payload.startswith("{"):
+        import json
+        data = json.loads(payload)
+        return (
+            float(data["no2"]),
+            float(data["co"]),
+            float(data["pm10"]),
+            float(data["pm25"]),
+        )
+    # fallback: CSV
+    parts = [float(x.strip()) for x in payload.split(",")]
+    if len(parts) < 4:
+        raise ValueError("need at least 4 values")
+    return parts[:4]
+
+
 def on_message(client, userdata, msg):
-    """Parse TELEMETRY:no2,co,pm10,pm25 → run inference → save."""
+    """Parse CSV or JSON payload → run inference → save."""
     try:
         payload = msg.payload.decode().strip()
-        # strip optional "TELEMETRY:" prefix
-        if ":" in payload:
-            payload = payload.split(":", 1)[1]
-        parts = [float(x.strip()) for x in payload.split(",")]
-        if len(parts) < 4:
-            return
-        no2, co, pm10, pm25 = parts[:4]
-    except (ValueError, IndexError):
+        no2, co, pm10, pm25 = _parse(payload)
+    except (ValueError, IndexError, KeyError):
         return
 
     try:
