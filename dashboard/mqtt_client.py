@@ -1,4 +1,6 @@
 import os
+import json
+import logging
 import threading
 import django
 import paho.mqtt.client as mqtt
@@ -10,16 +12,17 @@ from django.conf import settings
 from .ml import predict
 from .models import PredictionRecord
 
+logger = logging.getLogger(__name__)
+
 
 def _parse(payload: str):
     """Return (no2, co, pm10, pm25) from CSV or JSON payload."""
     payload = payload.strip()
     # strip optional "TELEMETRY:" prefix (legacy CSV)
-    if ":" in payload:
+    if payload.startswith("TELEMETRY:"):
         payload = payload.split(":", 1)[1].strip()
 
     if payload.startswith("{"):
-        import json
         data = json.loads(payload)
         return (
             float(data["no2"]),
@@ -40,6 +43,7 @@ def on_message(client, userdata, msg):
         payload = msg.payload.decode().strip()
         no2, co, pm10, pm25 = _parse(payload)
     except (ValueError, IndexError, KeyError):
+        logger.warning("Failed to parse payload: %s", payload[:80])
         return
 
     try:
@@ -51,7 +55,7 @@ def on_message(client, userdata, msg):
             probabilities=pred["probabilities"],
         )
     except Exception:
-        pass
+        logger.exception("Failed to process MQTT message")
 
 
 _client = None
@@ -75,7 +79,7 @@ def get_client() -> mqtt.Client:
         thread = threading.Thread(target=_client.loop_forever, daemon=True)
         thread.start()
     except Exception as e:
-        print(f"[MQTT] connection failed: {e}")
+        logger.error("MQTT connection failed: %s", e)
         _client = None
 
     return _client
