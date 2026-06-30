@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "author": "Deny Rianto",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "wokwi-esp32-devkit-v1",
+      "id": "esp",
+      "top": 0,
+      "left": 0,
+      "rotate": 0,
+      "attrs": ""
+    },
+    {
+      "type": "wokwi-mq-2",
+      "id": "mq2",
+      "top": -280,
+      "left": 200,
+      "rotate": 0,
+      "attrs": ""
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "pot-mq135",
+      "top": -280,
+      "left": -200,
+      "rotate": 0,
+      "attrs": ""
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "pot-pm25",
+      "top": 0,
+      "left": -200,
+      "rotate": 0,
+      "attrs": ""
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "pot-pm10",
+      "top": 280,
+      "left": -200,
+      "rotate": 0,
+      "attrs": ""
+    }
+  ],
+  "connections": [
+    ["mq2:AOUT", "esp:35", "green", ["v"]],
+    ["pot-mq135:WIP", "esp:34", "brown", ["v"]],
+    ["pot-pm25:WIP", "esp:32", "yellow", ["v"]],
+    ["pot-pm10:WIP", "esp:33", "orange", ["v"]],
+
+    ["mq2:GND", "esp:GND.1", "black", ["v"]],
+    ["mq2:VCC", "esp:5V", "red", ["v"]],
+
+    ["pot-mq135:GND", "esp:GND.1", "black", ["v"]],
+    ["pot-mq135:VCC", "esp:3V3", "red", ["v"]],
+    ["pot-pm25:GND", "esp:GND.1", "black", ["v"]],
+    ["pot-pm25:VCC", "esp:3V3", "red", ["v"]],
+    ["pot-pm10:GND", "esp:GND.1", "black", ["v"]],
+    ["pot-pm10:VCC", "esp:3V3", "red", ["v"]]
+  ]
+}
